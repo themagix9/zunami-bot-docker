@@ -5,10 +5,8 @@ services:
     build: .
     container_name: discord-bot-zunami
     restart: unless-stopped
-    environment:
-      DISCORD_TOKEN: ${DISCORD_TOKEN}
-      CLIENT_ID: ${CLIENT_ID}
-      GUILD_ID: ${GUILD_ID}
+    env_file:
+      - stack.env
     volumes:
       - bot_data:/app/data
 
