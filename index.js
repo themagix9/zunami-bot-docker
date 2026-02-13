@@ -13,6 +13,14 @@ const {
 
 const fs = require('fs');
 const path = require('path');
+const { startNotifier } = require("./utils/notifier");
+
+client.once("ready", () => {
+  console.log("Bot ready");
+  startNotifier(client);
+});
+
+
 
 // Logger Utility
 const { logToChannel } = require('./utils/logger');
