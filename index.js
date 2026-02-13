@@ -79,10 +79,10 @@ if (fs.existsSync(configPath)) {
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Bot ist online als ${client.user.tag}`);
 
-  client.user.setActivity({
-    name: "ZUNAMI9000",
-    type: ActivityType.Watching,
-  });
+  client.user.setActivity("ZUNAMI9000", {
+  type: ActivityType.Streaming,
+  url: "https://www.twitch.tv/zunami9000",
+});
 
   // Notifier starten (YT / Twitch Live / Clips)
   try {
