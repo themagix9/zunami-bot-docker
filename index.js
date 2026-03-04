@@ -34,6 +34,25 @@ app.listen(3000, () => {
   console.log("HTTP server running on port 3000");
 });
 
+app.post("/twitch/eventsub", (req, res) => {
+
+  const messageType = req.header("Twitch-Eventsub-Message-Type");
+
+  // Twitch verification challenge
+  if (messageType === "webhook_callback_verification") {
+    console.log("Twitch EventSub verified");
+    return res.status(200).send(req.body.challenge);
+  }
+
+  // Event received
+  if (messageType === "notification") {
+    console.log("Twitch Event:", req.body.subscription.type);
+    console.log(req.body.event);
+  }
+
+  res.sendStatus(200);
+});
+
 
 // -------------------- CREATE CLIENT --------------------
 const client = new Client({
