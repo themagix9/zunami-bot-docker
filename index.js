@@ -21,6 +21,20 @@ const { logToChannel } = require("./utils/logger");
 // Notifier (YT / Twitch Live / Clips)
 const { startNotifier } = require("./utils/notifier");
 
+const express = require("express");
+
+const app = express();
+app.use(express.json());
+
+app.get("/health", (req, res) => {
+  res.send("OK");
+});
+
+app.listen(3000, () => {
+  console.log("HTTP server running on port 3000");
+});
+
+
 // -------------------- CREATE CLIENT --------------------
 const client = new Client({
   intents: [
