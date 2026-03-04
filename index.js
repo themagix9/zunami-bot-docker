@@ -126,6 +126,16 @@ client.once(Events.ClientReady, async () => {
   } catch (e) {
     console.error("❌ Notifier Fehler:", e?.message || e);
   }
+
+  // EventSub Subscriptions sicherstellen (stream.online/offline)
+  try {
+    const r = await ensureEventSubSubscriptions();
+    console.log(
+      `✅ EventSub ensured. callback=${r.callback} broadcasterId=${r.broadcasterId} created=${r.created} existing=${r.existing}`
+    );
+  } catch (e) {
+    console.error("❌ EventSub ensure Fehler:", e?.message || e);
+  }
 });
 
 // -------------------- MEMBER JOIN / LEAVE --------------------
