@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "deploy-commands": "node deploy-commands.js"
+    "deploy-commands": "node deploy-commands.js",
     "eventsub:subscribe": "node scripts/eventsub-subscribe.js"
   },
   "dependencies": {
