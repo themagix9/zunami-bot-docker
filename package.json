@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "deploy-commands": "node deploy-commands.js"
+    "eventsub:subscribe": "node scripts/eventsub-subscribe.js"
   },
   "dependencies": {
     "discord.js": "^14.11.0",
