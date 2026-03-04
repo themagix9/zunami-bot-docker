@@ -2,6 +2,8 @@
 // Discord.js v14
 require("dotenv").config();
 
+const { ensureEventSubSubscriptions } = require("./utils/eventsub-auto");
+
 const {
   Client,
   GatewayIntentBits,
