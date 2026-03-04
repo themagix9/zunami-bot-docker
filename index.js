@@ -9,6 +9,12 @@ const { incAction } = require("./utils/modstats-store");
 const { buildReport } = require("./utils/modreport");
 
 const {
+  ensureLeaderboardMessage,
+  updateLeaderboardMessage,
+  scheduleLeaderboardUpdate,
+} = require("./utils/live-leaderboard");
+
+const {
   Client,
   GatewayIntentBits,
   Partials,
@@ -130,6 +136,13 @@ client.once(Events.ClientReady, async () => {
   } catch (e) {
     console.error("❌ Notifier Fehler:", e?.message || e);
   }
+
+  try {
+      await ensureLeaderboardMessage(client);
+      console.log("✅ Live leaderboard message ensured");
+    } catch (e) {
+      console.error("❌ Live leaderboard ensure failed:", e?.message || e);
+    }
 
   // EventSub Subscriptions sicherstellen (stream.online/offline)
   try {
@@ -286,17 +299,8 @@ client.on(Events.MessageCreate, async (message) => {
   const cmd = args.shift()?.toLowerCase();
 
   if (cmd === "modstats") {
-  const roleId = process.env.MODS_ROLE_ID;
-
-  const { content, embed } = buildReport({
-    mentionRoleId: roleId,
-    title: "📊 Mod Statistik"
-  });
-
-  return message.channel.send({
-    content: content || "",
-    embeds: embed ? [embed] : []
-  });
+  await updateLeaderboardMessage(client);
+  return message.reply("✅ Leaderboard aktualisiert.");
 }
 
     if (cmd === "embedtest") {
@@ -319,6 +323,7 @@ client.on(Events.MessageCreate, async (message) => {
      // zählt Warnung auf den Mod
      incAction({ moderatorId: message.author.id, moderatorName: message.author.tag, action: "warn" });
 
+     scheduleLeaderboardUpdate(client);
      await logToChannel(message.guild, `⚠️ WARN: ${message.author.tag} -> ${target.user.tag} | ${reason}`);
      return message.reply(`⚠️ Verwarnung für ${target} gespeichert.`);
    }
