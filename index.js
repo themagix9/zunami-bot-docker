@@ -286,10 +286,18 @@ client.on(Events.MessageCreate, async (message) => {
   const cmd = args.shift()?.toLowerCase();
 
   if (cmd === "modstats") {
-     const roleId = process.env.MODS_ROLE_ID;
-     const { content, embed } = buildReport({ mentionRoleId: roleId });
-     return message.channel.send({ content, embeds: [embed] });
-   }
+  const roleId = process.env.MODS_ROLE_ID;
+
+  const { content, embed } = buildReport({
+    mentionRoleId: roleId,
+    title: "📊 Mod Statistik"
+  });
+
+  return message.channel.send({
+    content: content || "",
+    embeds: embed ? [embed] : []
+  });
+}
 
    if (cmd === "warn") {
      if (!message.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
