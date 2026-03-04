@@ -299,6 +299,12 @@ client.on(Events.MessageCreate, async (message) => {
   });
 }
 
+    if (cmd === "embedtest") {
+      const { EmbedBuilder } = require("discord.js");
+      const e = new EmbedBuilder().setTitle("Embed Test").setDescription("Wenn du das siehst, sind Embeds ok.");
+      return message.channel.send({ embeds: [e] });
+    }
+
    if (cmd === "warn") {
      if (!message.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
        return message.reply("❌ Keine Berechtigung.");
