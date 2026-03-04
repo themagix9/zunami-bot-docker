@@ -4,6 +4,10 @@ require("dotenv").config();
 
 const { ensureEventSubSubscriptions } = require("./utils/eventsub-auto");
 
+const cron = require("node-cron");
+const { incAction } = require("./utils/modstats-store");
+const { buildReport } = require("./utils/modreport");
+
 const {
   Client,
   GatewayIntentBits,
@@ -136,6 +140,31 @@ client.once(Events.ClientReady, async () => {
   } catch (e) {
     console.error("❌ EventSub ensure Fehler:", e?.message || e);
   }
+
+  // Weekly Mod Report (Sonntag 15:00)
+ const reportCron = process.env.REPORT_CRON || "0 15 * * 0";
+ const tz = process.env.TIMEZONE || "Europe/Vienna";
+
+ cron.schedule(
+   reportCron,
+   async () => {
+     try {
+       const chId = process.env.MODREPORT_CHANNEL_ID;
+       const roleId = process.env.MODS_ROLE_ID;
+       if (!chId) return console.warn("MODREPORT_CHANNEL_ID fehlt");
+
+       const ch = await client.channels.fetch(chId);
+       if (!ch) return console.warn("Modreport Channel nicht gefunden");
+
+       const { content, embed } = buildReport({ mentionRoleId: roleId });
+       await ch.send({ content, embeds: [embed] });
+       console.log("✅ Weekly mod report posted");
+     } catch (e) {
+       console.error("❌ Weekly mod report failed:", e?.message || e);
+     }
+   },
+   { timezone: tz }
+ );
 });
 
 // -------------------- MEMBER JOIN / LEAVE --------------------
@@ -255,6 +284,30 @@ client.on(Events.MessageCreate, async (message) => {
 
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const cmd = args.shift()?.toLowerCase();
+
+  if (cmd === "modstats") {
+     const roleId = process.env.MODS_ROLE_ID;
+     const { content, embed } = buildReport({ mentionRoleId: roleId });
+     return message.channel.send({ content, embeds: [embed] });
+   }
+
+   if (cmd === "warn") {
+     if (!message.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+       return message.reply("❌ Keine Berechtigung.");
+     }
+
+     const target = message.mentions.members?.first();
+     if (!target) return message.reply("Bitte ein Mitglied erwähnen. Beispiel: `!warn @user Grund`");
+
+     // Grund: alles nach der Mention
+     const reason = args.join(" ").replace(/<@!?(\d+)>/, "").trim() || "—";
+
+     // zählt Warnung auf den Mod
+     incAction({ moderatorId: message.author.id, moderatorName: message.author.tag, action: "warn" });
+
+     await logToChannel(message.guild, `⚠️ WARN: ${message.author.tag} -> ${target.user.tag} | ${reason}`);
+     return message.reply(`⚠️ Verwarnung für ${target} gespeichert.`);
+   }
 
   // Beispiel: !mute
   if (cmd === "mute") {
