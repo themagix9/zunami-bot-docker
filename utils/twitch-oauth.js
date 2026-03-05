@@ -33,16 +33,16 @@ function getAuthUrl(state = "zunami-bot") {
   // Minimal für EventSub channel.moderate (Twitch ist hier streng)
   // Wenn Twitch mehr will, erweitern wir.
   const scopes = [
-    "moderation:read",
-    "channel:moderate",
-    "channel:read:subscriptions",
-    "channel:read:moderators",
-    "channel:read:vips",
-    "channel:read:editors",
-    "moderator:read:chatters",
-    "moderator:read:followers",
-    "moderator:read:shield_mode",
-  ];
+  "moderator:read:moderators",
+  "moderator:read:blocked_terms",
+  "moderator:read:automod_settings",
+  "moderator:read:chat_settings",
+  "moderator:read:banned_users",
+  "moderator:read:unban_requests",
+  "moderator:read:moderation_actions",
+  "moderator:manage:banned_users",
+  "moderator:manage:chat_messages",
+];
 
   const params = new URLSearchParams({
     client_id: clientId,
