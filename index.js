@@ -11,7 +11,6 @@ const { buildReport } = require("./utils/modreport");
 
 const { getAuthUrl, exchangeCode, twitchApiGet } = require("./utils/twitch-oauth");
 const { ensureModerationSubs } = require("./utils/eventsub-moderation");
-const { incAction } = require("./utils/modstats-store");
 const { scheduleLeaderboardUpdate, ensureLeaderboardMessage } = require("./utils/live-leaderboard");
 
 const {
