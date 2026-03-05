@@ -52,10 +52,13 @@ function ensureCurrentWeek(data) {
 }
 
 function incAction({ moderatorId, moderatorName, action }) {
+  // Erzwinge Twitch-Key (verhindert Discord/Twitch-Duplikate)
+  const key = `twitch:${moderatorId}`;
+
   let data = ensureCurrentWeek(load());
 
-  if (!data.mods[moderatorId]) {
-    data.mods[moderatorId] = {
+  if (!data.mods[key]) {
+    data.mods[key] = {
       name: moderatorName || moderatorId,
       counts: { timeouts: 0, bans: 0, deletes: 0, automod: 0 },
     };
@@ -71,7 +74,7 @@ function incAction({ moderatorId, moderatorName, action }) {
   const k = map[action];
   if (!k) return;
 
-  data.mods[moderatorId].counts[k] = (data.mods[moderatorId].counts[k] || 0) + 1;
+  data.mods[key].counts[k] = (data.mods[key].counts[k] || 0) + 1;
   data.totals[k] = (data.totals[k] || 0) + 1;
 
   save(data);
