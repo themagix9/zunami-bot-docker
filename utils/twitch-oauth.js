@@ -34,14 +34,7 @@ function getAuthUrl(state = "zunami-bot") {
   // Wenn Twitch mehr will, erweitern wir.
   const scopes = [
   "moderator:read:moderators",
-  "moderator:read:blocked_terms",
-  "moderator:read:automod_settings",
-  "moderator:read:chat_settings",
-  "moderator:read:banned_users",
-  "moderator:read:unban_requests",
-  "moderator:read:moderation_actions",
-  "moderator:manage:banned_users",
-  "moderator:manage:chat_messages",
+  "moderator:manage:chat_messages"
 ];
 
   const params = new URLSearchParams({
