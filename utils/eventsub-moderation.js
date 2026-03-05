@@ -1,6 +1,20 @@
 // utils/eventsub-moderation.js
 const axios = require("axios");
-const { getValidAccessToken } = require("./twitch-oauth");
+
+async function getAppToken() {
+  const clientId = needEnv("TWITCH_CLIENT_ID");
+  const clientSecret = needEnv("TWITCH_CLIENT_SECRET");
+
+  const r = await axios.post("https://id.twitch.tv/oauth2/token", null, {
+    params: {
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "client_credentials",
+    },
+  });
+
+  return r.data.access_token;
+}
 
 function needEnv(name) {
   const v = process.env[name];
@@ -9,7 +23,7 @@ function needEnv(name) {
 }
 
 async function listSubs() {
-  const token = await getValidAccessToken();
+  const token = await getAppToken();
   const clientId = needEnv("TWITCH_CLIENT_ID");
 
   const r = await axios.get("https://api.twitch.tv/helix/eventsub/subscriptions?first=100", {
@@ -20,7 +34,7 @@ async function listSubs() {
 }
 
 async function createSub({ type, version = "1", condition, callback, secret }) {
-  const token = await getValidAccessToken();
+  const token = await getAppToken();
   const clientId = needEnv("TWITCH_CLIENT_ID");
 
   const body = {
