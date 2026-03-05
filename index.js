@@ -2,11 +2,17 @@
 // Discord.js v14
 require("dotenv").config();
 
+
 const { ensureEventSubSubscriptions } = require("./utils/eventsub-auto");
 
 const cron = require("node-cron");
 const { incAction } = require("./utils/modstats-store");
 const { buildReport } = require("./utils/modreport");
+
+const { getAuthUrl, exchangeCode, twitchApiGet } = require("./utils/twitch-oauth");
+const { ensureModerationSubs } = require("./utils/eventsub-moderation");
+const { incAction } = require("./utils/modstats-store");
+const { scheduleLeaderboardUpdate, ensureLeaderboardMessage } = require("./utils/live-leaderboard");
 
 const {
   ensureLeaderboardMessage,
@@ -36,7 +42,58 @@ const { startNotifier } = require("./utils/notifier");
 const express = require("express");
 
 const app = express();
-app.use(express.json());
+const crypto = require("crypto");
+
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
+
+let discordClient = null;
+
+app.get("/auth/twitch", (req, res) => {
+  const url = getAuthUrl("zunami-bot");
+  res.redirect(url);
+});
+
+app.get("/auth/twitch/callback", async (req, res) => {
+  try {
+    const code = req.query.code;
+    if (!code) return res.status(400).send("Missing code");
+    await exchangeCode(code);
+
+    // optional: whoami anzeigen
+    const me = await twitchApiGet("/users");
+    const user = me.data?.[0];
+
+    res.send(
+      `OK authorized as ${user?.display_name || "unknown"} (id=${user?.id || "?"}). Du kannst das Fenster schließen.`
+    );
+
+    // nach OAuth direkt Subscriptions sicherstellen
+    try {
+      const r = await ensureModerationSubs();
+      console.log(`✅ EventSub ensured after OAuth. created=${r.created} existing=${r.existing}`);
+    } catch (e) {
+      console.error("❌ ensureModerationSubs after OAuth failed:", e?.response?.data || e?.message || e);
+    }
+  } catch (e) {
+    console.error(e?.response?.data || e);
+    res.status(500).send("OAuth failed");
+  }
+});
+
+app.get("/twitch/whoami", async (req, res) => {
+  try {
+    const me = await twitchApiGet("/users");
+    res.json(me);
+  } catch (e) {
+    res.status(500).json({ error: e?.response?.data || e?.message || String(e) });
+  }
+});
 
 app.get("/health", (req, res) => {
   res.send("OK");
@@ -46,23 +103,99 @@ app.listen(3000, () => {
   console.log("HTTP server running on port 3000");
 });
 
-app.post("/twitch/eventsub", (req, res) => {
+function verifyTwitchEventSub(req) {
+  const secret = process.env.EVENTSUB_SECRET;
+  if (!secret) return { ok: false, reason: "EVENTSUB_SECRET missing" };
+
+  const msgId = req.header("Twitch-Eventsub-Message-Id");
+  const ts = req.header("Twitch-Eventsub-Message-Timestamp");
+  const sig = req.header("Twitch-Eventsub-Message-Signature");
+
+  if (!msgId || !ts || !sig || !req.rawBody) return { ok: false, reason: "missing headers/rawBody" };
+
+  const hmac = crypto.createHmac("sha256", secret);
+  hmac.update(msgId + ts + req.rawBody.toString("utf8"));
+  const expected = "sha256=" + hmac.digest("hex");
+
+  const ok = crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sig));
+  return { ok, reason: ok ? "ok" : "bad signature" };
+}
+
+app.post("/twitch/eventsub", async (req, res) => {
+  const v = verifyTwitchEventSub(req);
+  if (!v.ok) {
+    console.warn("❌ EventSub verify failed:", v.reason);
+    return res.sendStatus(403);
+  }
 
   const messageType = req.header("Twitch-Eventsub-Message-Type");
+  const subType = req.body?.subscription?.type;
 
-  // Twitch verification challenge
+  // 1) verification challenge
   if (messageType === "webhook_callback_verification") {
-    console.log("Twitch EventSub verified");
+    console.log(`✅ Twitch EventSub verified for ${subType}`);
     return res.status(200).send(req.body.challenge);
   }
 
-  // Event received
-  if (messageType === "notification") {
-    console.log("Twitch Event:", req.body.subscription.type);
-    console.log(req.body.event);
+  // 2) revocation (Twitch disabled a subscription)
+  if (messageType === "revocation") {
+    const status = req.body?.subscription?.status;
+    const reason = req.body?.subscription?.status_message;
+    console.warn(`⚠️ EventSub revoked: type=${subType} status=${status} reason=${reason}`);
+    return res.sendStatus(200);
   }
 
-  res.sendStatus(200);
+  // 3) notifications
+  if (messageType === "notification") {
+    // --- stream online/offline (optional debug)
+    if (subType === "stream.online") {
+      const ev = req.body?.event;
+      console.log(`🔴 stream.online: broadcaster=${ev?.broadcaster_user_name} id=${ev?.broadcaster_user_id}`);
+      return res.sendStatus(200);
+    }
+
+    if (subType === "stream.offline") {
+      const ev = req.body?.event;
+      console.log(`⚫ stream.offline: broadcaster=${ev?.broadcaster_user_name} id=${ev?.broadcaster_user_id}`);
+      return res.sendStatus(200);
+    }
+
+    // --- moderation events -> leaderboard
+    if (subType === "channel.moderate") {
+      const ev = req.body?.event;
+      const action = ev?.action; // timeout | ban | delete | unban | untimeout | ...
+
+      const modId = ev?.moderator_user_id || "unknown";
+      const modName = ev?.moderator_user_name || ev?.moderator_user_login || modId;
+
+      // Wir zählen nur die Actions, die du willst
+      const counted = new Set(["timeout", "ban", "delete"]);
+
+      if (counted.has(action)) {
+        incAction({ moderatorId: modId, moderatorName: modName, action });
+
+        if (discordClient) {
+          // live embed updaten (rate-limited über scheduleLeaderboardUpdate)
+          scheduleLeaderboardUpdate(discordClient);
+        }
+
+        console.log(`[MOD] action=${action} by ${modName}`);
+      } else {
+        // nur loggen damit du siehst, was Twitch sonst noch liefert
+        console.log(`[MOD] action=${action} by ${modName} (ignored)`);
+      }
+
+      return res.sendStatus(200);
+    }
+
+    // fallback: unknown event type
+    console.log(`ℹ️ EventSub notification received: type=${subType}`);
+    return res.sendStatus(200);
+  }
+
+  // fallback: unknown message type
+  console.log(`ℹ️ EventSub messageType=${messageType} type=${subType}`);
+  return res.sendStatus(200);
 });
 
 
@@ -124,12 +257,25 @@ if (fs.existsSync(configPath)) {
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Bot ist online als ${client.user.tag}`);
 
+  // Discord Presence
   client.user.setActivity("ZUNAMI9000", {
-  type: ActivityType.Streaming,
-  url: "https://www.twitch.tv/zunami9000",
-});
+    type: ActivityType.Streaming,
+    url: "https://www.twitch.tv/zunami9000",
+  });
 
-  // Notifier starten (YT / Twitch Live / Clips)
+  // global reference für Webhooks (EventSub -> Discord updates)
+  discordClient = client;
+
+  // 1) Live-Leaderboard Nachricht sicherstellen (eine Message, die editiert wird)
+  try {
+    await ensureLeaderboardMessage(client);
+    console.log("✅ Live leaderboard message ensured");
+  } catch (e) {
+    console.error("❌ Live leaderboard ensure failed:", e?.message || e);
+  }
+
+  // 2) Notifier starten (YT / Twitch Live / Clips) - kannst du behalten
+  //    (hat nix mit Mod-Stats zu tun, aber stört nicht)
   try {
     await startNotifier(client);
     console.log("✅ Notifier gestartet");
@@ -138,46 +284,15 @@ client.once(Events.ClientReady, async () => {
   }
 
   try {
-      await ensureLeaderboardMessage(client);
-      console.log("✅ Live leaderboard message ensured");
-    } catch (e) {
-      console.error("❌ Live leaderboard ensure failed:", e?.message || e);
-    }
-
-  // EventSub Subscriptions sicherstellen (stream.online/offline)
-  try {
-    const r = await ensureEventSubSubscriptions();
+    const r = await ensureModerationSubs();
     console.log(
-      `✅ EventSub ensured. callback=${r.callback} broadcasterId=${r.broadcasterId} created=${r.created} existing=${r.existing}`
+      `✅ EventSub ensured. callback=${r.callback} broadcasterId=${r.broadcasterId} moderatorId=${r.moderatorId} created=${r.created} existing=${r.existing}`
     );
   } catch (e) {
-    console.error("❌ EventSub ensure Fehler:", e?.message || e);
+    // Twitch gibt hier oft sehr hilfreiche JSON Errors zurück:
+    const details = e?.response?.data || e?.message || e;
+    console.error("❌ ensureModerationSubs failed (OAuth/Scopes?):", details);
   }
-
-  // Weekly Mod Report (Sonntag 15:00)
- const reportCron = process.env.REPORT_CRON || "0 15 * * 0";
- const tz = process.env.TIMEZONE || "Europe/Vienna";
-
- cron.schedule(
-   reportCron,
-   async () => {
-     try {
-       const chId = process.env.MODREPORT_CHANNEL_ID;
-       const roleId = process.env.MODS_ROLE_ID;
-       if (!chId) return console.warn("MODREPORT_CHANNEL_ID fehlt");
-
-       const ch = await client.channels.fetch(chId);
-       if (!ch) return console.warn("Modreport Channel nicht gefunden");
-
-       const { content, embed } = buildReport({ mentionRoleId: roleId });
-       await ch.send({ content, embeds: [embed] });
-       console.log("✅ Weekly mod report posted");
-     } catch (e) {
-       console.error("❌ Weekly mod report failed:", e?.message || e);
-     }
-   },
-   { timezone: tz }
- );
 });
 
 // -------------------- MEMBER JOIN / LEAVE --------------------
@@ -308,25 +423,6 @@ client.on(Events.MessageCreate, async (message) => {
       const e = new EmbedBuilder().setTitle("Embed Test").setDescription("Wenn du das siehst, sind Embeds ok.");
       return message.channel.send({ embeds: [e] });
     }
-
-   if (cmd === "warn") {
-     if (!message.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-       return message.reply("❌ Keine Berechtigung.");
-     }
-
-     const target = message.mentions.members?.first();
-     if (!target) return message.reply("Bitte ein Mitglied erwähnen. Beispiel: `!warn @user Grund`");
-
-     // Grund: alles nach der Mention
-     const reason = args.join(" ").replace(/<@!?(\d+)>/, "").trim() || "—";
-
-     // zählt Warnung auf den Mod
-     incAction({ moderatorId: message.author.id, moderatorName: message.author.tag, action: "warn" });
-
-     scheduleLeaderboardUpdate(client);
-     await logToChannel(message.guild, `⚠️ WARN: ${message.author.tag} -> ${target.user.tag} | ${reason}`);
-     return message.reply(`⚠️ Verwarnung für ${target} gespeichert.`);
-   }
 
   // Beispiel: !mute
   if (cmd === "mute") {

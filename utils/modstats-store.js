@@ -24,7 +24,7 @@ function load() {
     const init = {
       weekStart,
       mods: {},
-      totals: { timeouts: 0, bans: 0, deletes: 0, automod: 0, warns: 0 },
+      totals: { timeouts: 0, bans: 0, deletes: 0, automod: 0 },
     };
     fs.writeFileSync(FILE, JSON.stringify(init, null, 2), "utf8");
     return init;
@@ -45,7 +45,7 @@ function ensureCurrentWeek(data) {
     return {
       weekStart: current,
       mods: {},
-      totals: { timeouts: 0, bans: 0, deletes: 0, automod: 0, warns: 0 },
+      totals: { timeouts: 0, bans: 0, deletes: 0, automod: 0 },
     };
   }
   return data;
@@ -57,7 +57,7 @@ function incAction({ moderatorId, moderatorName, action }) {
   if (!data.mods[moderatorId]) {
     data.mods[moderatorId] = {
       name: moderatorName || moderatorId,
-      counts: { timeouts: 0, bans: 0, deletes: 0, automod: 0, warns: 0 },
+      counts: { timeouts: 0, bans: 0, deletes: 0, automod: 0 },
     };
   }
 
@@ -66,7 +66,6 @@ function incAction({ moderatorId, moderatorName, action }) {
     ban: "bans",
     delete: "deletes",
     automod: "automod",
-    warn: "warns",
   };
 
   const k = map[action];
@@ -86,8 +85,7 @@ function getLeaderboard() {
       (c.timeouts || 0) +
       (c.bans || 0) * 3 +
       (c.deletes || 0) +
-      (c.automod || 0) +
-      (c.warns || 0);
+      (c.automod || 0);
 
     return { id, name: m.name, ...c, score };
   });
