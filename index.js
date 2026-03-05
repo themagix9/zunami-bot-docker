@@ -14,12 +14,6 @@ const { ensureModerationSubs } = require("./utils/eventsub-moderation");
 const { scheduleLeaderboardUpdate, ensureLeaderboardMessage } = require("./utils/live-leaderboard");
 
 const {
-  ensureLeaderboardMessage,
-  updateLeaderboardMessage,
-  scheduleLeaderboardUpdate,
-} = require("./utils/live-leaderboard");
-
-const {
   Client,
   GatewayIntentBits,
   Partials,
