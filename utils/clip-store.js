@@ -113,6 +113,28 @@ function getTrackableClips() {
   return data.clips.filter((clip) => clip.trackingStatus === "tracking");
 }
 
+function findDuplicateClip({ url = null, platform = null, videoId = null }) {
+  const data = load();
+
+  return (
+    data.clips.find((clip) => {
+      if (url && clip.url === url) return true;
+
+      if (
+        platform &&
+        videoId &&
+        clip.platform === platform &&
+        clip.videoId &&
+        clip.videoId === videoId
+      ) {
+        return true;
+      }
+
+      return false;
+    }) || null
+  );
+}
+
 module.exports = {
   load,
   save,
@@ -120,6 +142,7 @@ module.exports = {
   getAllClips,
   findClipById,
   findClipByUrl,
+  findDuplicateClip,
   updateClip,
   getTrackableClips,
 };

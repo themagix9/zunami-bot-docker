@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
-const { addClip, findClipByUrl } = require("../../utils/clip-store");
+const { addClip, findDuplicateClip } = require("../../utils/clip-store");
 const { detectPlatform, normalizeClipUrl, extractYouTubeVideoId } = require("../../utils/clip-tracker");
 
 const CLIP_SUBMIT_CHANNEL_ID = process.env.CLIP_SUBMIT_CHANNEL_ID || "1480964246295548006";
@@ -51,13 +51,41 @@ module.exports = {
       });
     }
 
-    const existing = findClipByUrl(normalizedUrl);
-    if (existing) {
-      return interaction.reply({
-        content: `Dieser Clip wurde bereits eingereicht.\nID: **${existing.id}**\nLink: ${existing.url}`,
-        ephemeral: true,
-      });
-    }
+    const platform = detectPlatform(normalizedUrl);
+if (!platform) {
+  return interaction.reply({
+    content: "Aktuell werden nur YouTube Shorts und TikTok Links angenommen.",
+    ephemeral: true,
+  });
+}
+
+let videoId = null;
+if (platform === "youtube") {
+  videoId = extractYouTubeVideoId(normalizedUrl);
+  if (!videoId) {
+    return interaction.reply({
+      content: "YouTube-Link erkannt, aber die Video-ID konnte nicht gelesen werden.",
+      ephemeral: true,
+    });
+  }
+}
+
+const existing = findDuplicateClip({
+  url: normalizedUrl,
+  platform,
+  videoId,
+});
+
+if (existing) {
+  return interaction.reply({
+    content:
+      `Dieser Clip wurde bereits eingereicht.\n\n` +
+      `**ID:** ${existing.id}\n` +
+      `**Plattform:** ${existing.platform}\n` +
+      `**Link:** ${existing.url}`,
+    ephemeral: true,
+  });
+}
 
     const platform = detectPlatform(normalizedUrl);
     if (!platform) {
