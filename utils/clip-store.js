@@ -135,6 +135,17 @@ function findDuplicateClip({ url = null, platform = null, videoId = null }) {
   );
 }
 
+function deleteClipById(id) {
+  const data = load();
+  const before = data.clips.length;
+  data.clips = data.clips.filter((clip) => clip.id !== Number(id));
+
+  if (data.clips.length === before) return false;
+
+  save(data);
+  return true;
+}
+
 module.exports = {
   load,
   save,
@@ -144,5 +155,6 @@ module.exports = {
   findClipByUrl,
   findDuplicateClip,
   updateClip,
+  deleteClipById,
   getTrackableClips,
 };
