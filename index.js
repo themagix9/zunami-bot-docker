@@ -13,6 +13,8 @@ const { getAuthUrl, exchangeCode, twitchApiGet } = require("./utils/twitch-oauth
 const { ensureModerationSubs } = require("./utils/eventsub-moderation");
 const { scheduleLeaderboardUpdate, ensureLeaderboardMessage } = require("./utils/live-leaderboard");
 
+const { startClipTracker } = require("./utils/clip-tracker");
+
 const {
   Client,
   GatewayIntentBits,
@@ -258,6 +260,13 @@ client.once(Events.ClientReady, async () => {
 
   // global reference für Webhooks (EventSub -> Discord updates)
   discordClient = client;
+
+  try {
+      startClipTracker(client);
+      console.log("✅ Clip-Tracker gestartet");
+    } catch (e) {
+      console.error("❌ Clip-Tracker Fehler:", e?.message || e);
+    }
 
   // 1) Live-Leaderboard Nachricht sicherstellen (eine Message, die editiert wird)
   try {
