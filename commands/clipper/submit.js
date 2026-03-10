@@ -51,14 +51,6 @@ module.exports = {
       });
     }
 
-    const platform = detectPlatform(normalizedUrl);
-if (!platform) {
-  return interaction.reply({
-    content: "Aktuell werden nur YouTube Shorts und TikTok Links angenommen.",
-    ephemeral: true,
-  });
-}
-
 let videoId = null;
 if (platform === "youtube") {
   videoId = extractYouTubeVideoId(normalizedUrl);
