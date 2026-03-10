@@ -51,17 +51,6 @@ module.exports = {
       });
     }
 
-let videoId = null;
-if (platform === "youtube") {
-  videoId = extractYouTubeVideoId(normalizedUrl);
-  if (!videoId) {
-    return interaction.reply({
-      content: "YouTube-Link erkannt, aber die Video-ID konnte nicht gelesen werden.",
-      ephemeral: true,
-    });
-  }
-}
-
 const existing = findDuplicateClip({
   url: normalizedUrl,
   platform,
