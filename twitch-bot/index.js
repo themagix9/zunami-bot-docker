@@ -36,8 +36,8 @@ async function main() {
   }
 
   const socialReminders = [
-    '📸 Instagram → https://www.instagram.com/zunami9000/',
-    '🎬 TikTok Clips → https://www.tiktok.com/@zunami9000',
+    '📸 Instagram für Stream Updates → https://www.instagram.com/zunami9000/',
+    '🎬 TikTok für Clips → https://www.tiktok.com/@zunami9000',
     '▶️ YouTube Highlights → https://www.youtube.com/zunami'
   ];
 
