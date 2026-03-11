@@ -14,7 +14,7 @@ async function main() {
     TWITCH_CHANNEL,
     TWITCH_BROADCASTER_ID,
     EVENTSUB_SECRET,
-    PUBLIC_BASE_URL,
+    PUBLIC_BASE_URL_BOT,
     TWITCH_BOT_PORT
   } = process.env;
 
@@ -27,7 +27,7 @@ async function main() {
     'TWITCH_CHANNEL',
     'TWITCH_BROADCASTER_ID',
     'EVENTSUB_SECRET',
-    'PUBLIC_BASE_URL',
+    'PUBLIC_BASE_URL_BOT',
     'TWITCH_BOT_PORT'
   ].filter((key) => !process.env[key]);
 
@@ -95,14 +95,14 @@ async function main() {
 
   const listener = new EventSubHttpListener({
     apiClient,
-    hostName: new URL(PUBLIC_BASE_URL).hostname,
+    hostName: new URL(PUBLIC_BASE_URL_BOT).hostname,
     pathPrefix: '/twitch/eventsub',
     secret: EVENTSUB_SECRET,
     port: Number(TWITCH_BOT_PORT)
   });
 
   await listener.listen();
-  console.log(`[EVENTSUB] Listening on ${PUBLIC_BASE_URL}/twitch/eventsub`);
+  console.log(`[EVENTSUB] Listening on ${PUBLIC_BASE_URL_BOT}/twitch/eventsub`);
 
   await listener.subscribeToStreamOnlineEvents(TWITCH_BROADCASTER_ID, async () => {
     if (liveAnnounced) return;
