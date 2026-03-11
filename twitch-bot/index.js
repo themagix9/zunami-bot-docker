@@ -117,7 +117,7 @@ async function main() {
       await eventSub.markAsReady();
       console.log(`[EVENTSUB] Listening on ${PUBLIC_BASE_URL_BOT}/twitch/eventsub`);
 
-      await eventSub.subscribeToStreamOnlineEvents(TWITCH_BROADCASTER_ID, async () => {
+      await eventSub.onStreamOnline(TWITCH_BROADCASTER_ID, async () => {
         if (liveAnnounced) return;
         liveAnnounced = true;
 
@@ -137,14 +137,14 @@ async function main() {
         }
       });
 
-      await eventSub.subscribeToStreamOfflineEvents(TWITCH_BROADCASTER_ID, async () => {
+      await eventSub.onStreamOffline(TWITCH_BROADCASTER_ID, async () => {
         liveAnnounced = false;
         console.log('[EVENTSUB] Stream offline -> reset live flag');
       });
 
-      await eventSub.subscribeToChannelRaidToBroadcasterEvents(
-        TWITCH_BROADCASTER_ID,
-        async (event) => {
+      await eventSub.onChannelRaidTo(
+      TWITCH_BROADCASTER_ID,
+      async (event) => {
           const raiderName = event.raidingBroadcasterDisplayName;
           const raiderLogin = event.raidingBroadcasterName;
           const viewerCount = event.viewers ?? 0;
