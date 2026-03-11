@@ -2,7 +2,7 @@ const express = require('express');
 const { RefreshingAuthProvider } = require('@twurple/auth');
 const { ChatClient } = require('@twurple/chat');
 const { ApiClient } = require('@twurple/api');
-const { EventSubHttpListener } = require('@twurple/eventsub-http');
+const { EventSubMiddleware } = require('@twurple/eventsub-http');
 
 async function main() {
   const {
@@ -71,11 +71,14 @@ async function main() {
 
     try {
       if (command === '!bot') {
-        await chatClient.say(channel, `Ja, ich bin ${TWITCH_BOT_USERNAME} 🤖 gebaut von LyGht und ich überwache den Chat 👀`);
+        await chatClient.say(
+          channel,
+          `Ja, ich bin ${TWITCH_BOT_USERNAME} 🤖 nd LyGht hat mich programmiert, also beschwert euch bei ihm. 👀`
+        );
       }
 
       if (command === '!discord') {
-        await chatClient.say(channel, 'Join den Discord hier: discord.gg/DEINLINK');
+        await chatClient.say(channel, 'Join den Discord hier: https://discord.gg/PjJeDSzNZ7');
       }
 
       if (command === '!lurk') {
@@ -89,76 +92,89 @@ async function main() {
   await chatClient.connect();
 
   const app = express();
+
   app.get('/health', (_req, res) => {
-    res.json({ ok: true });
+    res.json({ ok: true, service: 'twitch-bot' });
   });
 
-  const listener = new EventSubHttpListener({
+  app.get('/twitch/test', (_req, res) => {
+    res.json({ ok: true, service: 'twitch-bot', route: '/twitch/test' });
+  });
+
+  const eventSub = new EventSubMiddleware({
     apiClient,
     hostName: new URL(PUBLIC_BASE_URL_BOT).hostname,
     pathPrefix: '/twitch/eventsub',
-    secret: EVENTSUB_SECRET,
-    port: Number(TWITCH_BOT_PORT)
+    secret: EVENTSUB_SECRET
   });
 
-  await listener.start();
-  console.log(`[EVENTSUB] Listening on ${PUBLIC_BASE_URL_BOT}/twitch/eventsub`);
+  eventSub.apply(app);
 
-  await listener.subscribeToStreamOnlineEvents(TWITCH_BROADCASTER_ID, async () => {
-    if (liveAnnounced) return;
-    liveAnnounced = true;
+  app.listen(Number(TWITCH_BOT_PORT), async () => {
+    console.log(`[HTTP] Health server running on port ${TWITCH_BOT_PORT}`);
 
     try {
-      const stream = await apiClient.streams.getStreamByUserId(TWITCH_BROADCASTER_ID);
-      const title = stream?.title || 'Ohne Titel';
-      const gameName = stream?.gameName || 'Unbekannte Kategorie';
+      await eventSub.markAsReady();
+      console.log(`[EVENTSUB] Listening on ${PUBLIC_BASE_URL_BOT}/twitch/eventsub`);
 
-      await chatClient.say(
-        TWITCH_CHANNEL,
-        `🔴 ${TWITCH_CHANNEL} ist jetzt live und streamt ${gameName} - ${title}`
+      await eventSub.subscribeToStreamOnlineEvents(TWITCH_BROADCASTER_ID, async () => {
+        if (liveAnnounced) return;
+        liveAnnounced = true;
+
+        try {
+          const stream = await apiClient.streams.getStreamByUserId(TWITCH_BROADCASTER_ID);
+          const title = stream?.title || 'Ohne Titel';
+          const gameName = stream?.gameName || 'Unbekannte Kategorie';
+
+          await chatClient.say(
+            TWITCH_CHANNEL,
+            `🔴 ${TWITCH_CHANNEL} ist jetzt live und streamt ${gameName} - ${title}`
+          );
+
+          console.log('[EVENTSUB] Live announcement sent');
+        } catch (err) {
+          console.error('[EVENTSUB] Live announcement failed:', err);
+        }
+      });
+
+      await eventSub.subscribeToStreamOfflineEvents(TWITCH_BROADCASTER_ID, async () => {
+        liveAnnounced = false;
+        console.log('[EVENTSUB] Stream offline -> reset live flag');
+      });
+
+      await eventSub.subscribeToChannelRaidToBroadcasterEvents(
+        TWITCH_BROADCASTER_ID,
+        async (event) => {
+          const raiderName = event.raidingBroadcasterDisplayName;
+          const raiderLogin = event.raidingBroadcasterName;
+          const viewerCount = event.viewers ?? 0;
+
+          const now = Date.now();
+          const lastSeen = recentRaiders.get(raiderLogin) || 0;
+
+          if (now - lastSeen < 1000 * 60 * 60 * 6) {
+            console.log(`[EVENTSUB] Raid from ${raiderLogin} skipped due to cooldown`);
+            return;
+          }
+
+          recentRaiders.set(raiderLogin, now);
+
+          setTimeout(async () => {
+            try {
+              await chatClient.say(
+                TWITCH_CHANNEL,
+                `Danke für den Raid ${raiderName} mit ${viewerCount} Viewern 💜 Schaut auch bei twitch.tv/${raiderLogin} vorbei!`
+              );
+              console.log('[EVENTSUB] Raid shoutout sent');
+            } catch (err) {
+              console.error('[EVENTSUB] Raid shoutout failed:', err);
+            }
+          }, 15000);
+        }
       );
-
-      console.log('[EVENTSUB] Live announcement sent');
     } catch (err) {
-      console.error('[EVENTSUB] Live announcement failed:', err);
+      console.error('[EVENTSUB] Setup failed:', err);
     }
-  });
-
-  await listener.subscribeToStreamOfflineEvents(TWITCH_BROADCASTER_ID, async () => {
-    liveAnnounced = false;
-    console.log('[EVENTSUB] Stream offline -> reset live flag');
-  });
-
-  await listener.subscribeToChannelRaidToBroadcasterEvents(TWITCH_BROADCASTER_ID, async (event) => {
-    const raiderName = event.raidingBroadcasterDisplayName;
-    const raiderLogin = event.raidingBroadcasterName;
-    const viewerCount = event.viewers ?? 0;
-
-    const now = Date.now();
-    const lastSeen = recentRaiders.get(raiderLogin) || 0;
-
-    if (now - lastSeen < 1000 * 60 * 60 * 6) {
-      console.log(`[EVENTSUB] Raid from ${raiderLogin} skipped due to cooldown`);
-      return;
-    }
-
-    recentRaiders.set(raiderLogin, now);
-
-    setTimeout(async () => {
-      try {
-        await chatClient.say(
-          TWITCH_CHANNEL,
-          `Danke für den Raid ${raiderName} mit ${viewerCount} Viewern 💜 Schaut auch bei twitch.tv/${raiderLogin} vorbei!`
-        );
-        console.log('[EVENTSUB] Raid shoutout sent');
-      } catch (err) {
-        console.error('[EVENTSUB] Raid shoutout failed:', err);
-      }
-    }, 15000);
-  });
-
-  app.listen(Number(TWITCH_BOT_PORT), () => {
-    console.log(`[HTTP] Health server running on port ${TWITCH_BOT_PORT}`);
   });
 }
 
