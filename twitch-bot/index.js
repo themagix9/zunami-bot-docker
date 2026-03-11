@@ -136,6 +136,10 @@ async function main() {
         await chatClient.say(channel, 'ZUNAMI9000 distanziert sich ausdrücklich von den im Chat oder Stream getätigten Aussagen. Diese spiegeln nicht seine persönliche Meinung oder Haltung wider.');
       }
 
+      if (command === '!mod') {
+        await chatClient.say(channel, '🛡️ Du möchtest Moderator bei Zunami werden? | 👉 Bewirb dich hier: https://forms.gle/MndvREDDNLMX8q2a6 | ⏰ Gesucht werden Mods für Streams von 16–20 Uhr');
+      }
+
       if (command === '!lurk') {
         await chatClient.say(channel, `${user} ist jetzt im Lurk-Modus 👀`);
       }
