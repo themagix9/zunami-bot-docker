@@ -50,6 +50,8 @@ async function main() {
     ['chat']
   );
 
+  const commandCooldowns = new Map();
+
   const apiClient = new ApiClient({ authProvider });
 
   const chatClient = new ChatClient({
@@ -61,6 +63,18 @@ async function main() {
   const recentRaiders = new Map();
 
   let reminderInterval = null;
+
+  function isOnCooldown(command, cooldownMs) {
+    const now = Date.now();
+    const lastUsed = commandCooldowns.get(command) || 0;
+
+    if (now - lastUsed < cooldownMs) {
+      return true;
+    }
+
+    commandCooldowns.set(command, now);
+    return false;
+  }
 
   function formatUptime(startDate) {
     const diffMs = Date.now() - new Date(startDate).getTime();
@@ -111,6 +125,8 @@ async function main() {
 
     try {
       if (command === '!bot') {
+        if (isOnCooldown('bot', 30_000)) return;
+
         await chatClient.say(
           channel,
           `Ja, ich bin ${TWITCH_BOT_USERNAME} 🤖 und LyGht hat mich programmiert, also beschwert euch bei ihm. 👀`
@@ -118,6 +134,8 @@ async function main() {
       }
 
       if (command === '!uptime') {
+        if (isOnCooldown('uptime', 30_000)) return;
+
         const stream = await apiClient.streams.getStreamByUserId(TWITCH_BROADCASTER_ID);
 
         if (!stream) {
@@ -129,14 +147,20 @@ async function main() {
       }
 
       if (command === '!discord') {
+        if (isOnCooldown('discord', 30_000)) return;
+
         await chatClient.say(channel, 'Join den Discord hier: https://discord.gg/PjJeDSzNZ7');
       }
 
       if (command === '!distanz') {
+        if (isOnCooldown('distanz', 30_000)) return;
+
         await chatClient.say(channel, 'ZUNAMI9000 distanziert sich ausdrücklich von den im Chat oder Stream getätigten Aussagen. Diese spiegeln nicht seine persönliche Meinung oder Haltung wider.');
       }
 
       if (command === '!mod') {
+        if (isOnCooldown('mod', 30_000)) return;
+
         await chatClient.say(channel, '🛡️ Du möchtest Moderator bei Zunami werden? | 👉 Bewirb dich hier: https://forms.gle/MndvREDDNLMX8q2a6 | ⏰ Gesucht werden Mods für Streams von 16–20 Uhr');
       }
 
