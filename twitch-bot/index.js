@@ -62,7 +62,8 @@ async function main() {
   let liveAnnounced = false;
   const recentRaiders = new Map();
 
-  let reminderInterval = null;
+  let reminderInterval1 = null;
+  let reminderInterval2 = null;
 
   function isOnCooldown(command, cooldownMs) {
     const now = Date.now();
@@ -91,28 +92,50 @@ async function main() {
   }
 
   function startLiveReminder(chatClient, channel) {
-    if (reminderInterval) return;
+  if (reminderInterval1 || reminderInterval2) return;
 
-    reminderInterval = setInterval(async () => {
+  // Reminder 1 (alle 30 Minuten)
+  reminderInterval1 = setInterval(async () => {
+    try {
+      await chatClient.say(
+        channel,
+        'Falls euch der Stream gefällt, lasst ein Follow da 💜 Und joint den Discord: https://discord.gg/PjJeDSzNZ7'
+      );
+      console.log('[REMINDER] Reminder 1 sent');
+    } catch (err) {
+      console.error('[REMINDER] Reminder 1 failed:', err);
+    }
+  }, 30 * 60 * 1000);
+
+  // Reminder 2 startet 15 Minuten später
+  setTimeout(() => {
+    reminderInterval2 = setInterval(async () => {
       try {
         await chatClient.say(
           channel,
-          'Falls euch der Stream gefällt, lasst ein Follow da 💜 Und joint den Discord: https://discord.gg/PjJeDSzNZ7'
+          '👋 Neu hier? Checkt Zunami´s Socials für Clips & Updates: Discord: https://discord.gg/PjJeDSzNZ7 | Instagram: https://www.instagram.com/zunami9000/ | TikTok: https://www.tiktok.com/@zunami9000 | YouTube: https://www.youtube.com/zunami'
         );
-        console.log('[REMINDER] Live reminder sent');
+        console.log('[REMINDER] Reminder 2 sent');
       } catch (err) {
-        console.error('[REMINDER] Failed to send live reminder:', err);
+        console.error('[REMINDER] Reminder 2 failed:', err);
       }
-    }, 30 * 60 * 1000); // alle 30 Minuten
-  }
+    }, 30 * 60 * 1000);
+  }, 15 * 60 * 1000);
+}
 
-  function stopLiveReminder() {
-    if (reminderInterval) {
-      clearInterval(reminderInterval);
-      reminderInterval = null;
-      console.log('[REMINDER] Live reminder stopped');
-    }
-  }
+function stopLiveReminder() {
+if (reminderInterval1) {
+  clearInterval(reminderInterval1);
+  reminderInterval1 = null;
+}
+
+if (reminderInterval2) {
+  clearInterval(reminderInterval2);
+  reminderInterval2 = null;
+}
+
+console.log('[REMINDER] All reminders stopped');
+}
 
   chatClient.onConnect(() => {
     console.log(`[TWITCH] Connected as ${TWITCH_BOT_USERNAME} to #${TWITCH_CHANNEL}`);
