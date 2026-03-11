@@ -12,8 +12,8 @@ services:
 
   twitch-bot:
     build:
-    context: ./twitch-bot
-    dockerfile: Dockerfile
+      context: ./twitch-bot
+      dockerfile: Dockerfile
     container_name: twitch-bot-zunami
     restart: unless-stopped
     env_file:
