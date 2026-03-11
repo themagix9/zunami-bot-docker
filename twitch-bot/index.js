@@ -101,7 +101,7 @@ async function main() {
     port: Number(TWITCH_BOT_PORT)
   });
 
-  await listener.listen();
+  await listener.start();
   console.log(`[EVENTSUB] Listening on ${PUBLIC_BASE_URL_BOT}/twitch/eventsub`);
 
   await listener.subscribeToStreamOnlineEvents(TWITCH_BROADCASTER_ID, async () => {
