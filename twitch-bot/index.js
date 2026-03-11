@@ -132,6 +132,10 @@ async function main() {
         await chatClient.say(channel, 'Join den Discord hier: https://discord.gg/PjJeDSzNZ7');
       }
 
+      if (command === '!distanz') {
+        await chatClient.say(channel, 'ZUNAMI9000 distanziert sich ausdrücklich von den im Chat oder Stream getätigten Aussagen. Diese spiegeln nicht seine persönliche Meinung oder Haltung wider.');
+      }
+
       if (command === '!lurk') {
         await chatClient.say(channel, `${user} ist jetzt im Lurk-Modus 👀`);
       }
