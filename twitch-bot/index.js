@@ -54,7 +54,7 @@ async function main() {
     const command = text.trim().toLowerCase();
 
     if (command === '!discord') {
-      await chatClient.say(channel, 'Join den Discord hier: discord.gg/DEINLINK');
+      await chatClient.say(channel, 'Join den Discord hier: https://discord.gg/PjJeDSzNZ7');
     }
 
     if (command === '!lurk') {
@@ -62,7 +62,7 @@ async function main() {
     }
 
     if (command === '!bot') {
-      await chatClient.say(channel, `Ja, ich bin ${TWITCH_BOT_USERNAME} 🤖`);
+      await chatClient.say(channel, `Ja, ich bin ${TWITCH_BOT_USERNAME} 🤖 und LyGht hat mich programmiert, also beschwert euch bei ihm.`);
     }
   });
 
