@@ -1,0 +1,13 @@
+{
+  "name": "zunami-twitch-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@twurple/auth": "^7.2.1",
+    "@twurple/chat": "^7.2.1",
+    "axios": "^1.8.0"
+  }
+}

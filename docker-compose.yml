@@ -10,6 +10,15 @@ services:
     volumes:
       - bot_data:/app/data
 
+  twitch-bot:
+    build: ./twitch-bot
+    container_name: twitch-bot-zunami
+    restart: unless-stopped
+    env_file:
+      - stack.env
+    depends_on:
+      - discord-bot
+
   cloudflared:
       image: cloudflare/cloudflared:latest
       container_name: zunami-cloudflared
