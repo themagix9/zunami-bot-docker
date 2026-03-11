@@ -73,7 +73,7 @@ async function main() {
       if (command === '!bot') {
         await chatClient.say(
           channel,
-          `Ja, ich bin ${TWITCH_BOT_USERNAME} 🤖 nd LyGht hat mich programmiert, also beschwert euch bei ihm. 👀`
+          `Ja, ich bin ${TWITCH_BOT_USERNAME} 🤖 und LyGht hat mich programmiert, also beschwert euch bei ihm. 👀`
         );
       }
 
