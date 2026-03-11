@@ -29,12 +29,15 @@ async function main() {
     clientSecret: TWITCH_CLIENT_SECRET_BOT
   });
 
-  await authProvider.addUserForToken({
+  await authProvider.addUserForToken(
+  {
     accessToken: TWITCH_BOT_ACCESS_TOKEN,
     refreshToken: TWITCH_BOT_REFRESH_TOKEN,
     expiresIn: 0,
     obtainmentTimestamp: Date.now() - 3600_000
-  }, ['chat:read', 'chat:edit']);
+  },
+  ['chat']
+);
 
   const chatClient = new ChatClient({
     authProvider,
