@@ -11,13 +11,15 @@ services:
       - bot_data:/app/data
 
   twitch-bot:
-    build: ./twitch-bot
+    build:
+    context: ./twitch-bot
+    dockerfile: Dockerfile
     container_name: twitch-bot-zunami
     restart: unless-stopped
     env_file:
       - stack.env
-    depends_on:
-      - discord-bot
+    ports:
+      - "3001:3001"
 
   cloudflared:
       image: cloudflare/cloudflared:latest
