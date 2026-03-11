@@ -60,6 +60,46 @@ async function main() {
   let liveAnnounced = false;
   const recentRaiders = new Map();
 
+  let reminderInterval = null;
+
+  function formatUptime(startDate) {
+    const diffMs = Date.now() - new Date(startDate).getTime();
+    const totalMinutes = Math.floor(diffMs / 1000 / 60);
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours <= 0) {
+      return `${minutes}m`;
+    }
+
+    return `${hours}h ${minutes}m`;
+  }
+
+  function startLiveReminder(chatClient, channel) {
+    if (reminderInterval) return;
+
+    reminderInterval = setInterval(async () => {
+      try {
+        await chatClient.say(
+          channel,
+          'Falls euch der Stream gefällt, lasst ein Follow da 💜 Und joint den Discord: https://discord.gg/PjJeDSzNZ7'
+        );
+        console.log('[REMINDER] Live reminder sent');
+      } catch (err) {
+        console.error('[REMINDER] Failed to send live reminder:', err);
+      }
+    }, 30 * 60 * 1000); // alle 30 Minuten
+  }
+
+  function stopLiveReminder() {
+    if (reminderInterval) {
+      clearInterval(reminderInterval);
+      reminderInterval = null;
+      console.log('[REMINDER] Live reminder stopped');
+    }
+  }
+
   chatClient.onConnect(() => {
     console.log(`[TWITCH] Connected as ${TWITCH_BOT_USERNAME} to #${TWITCH_CHANNEL}`);
   });
@@ -75,6 +115,17 @@ async function main() {
           channel,
           `Ja, ich bin ${TWITCH_BOT_USERNAME} 🤖 und LyGht hat mich programmiert, also beschwert euch bei ihm. 👀`
         );
+      }
+
+      if (command === '!uptime') {
+        const stream = await apiClient.streams.getStreamByUserId(TWITCH_BROADCASTER_ID);
+
+        if (!stream) {
+          await chatClient.say(channel, 'Der Stream ist gerade offline.');
+        } else {
+          const uptime = formatUptime(stream.startDate);
+          await chatClient.say(channel, `Der Stream läuft seit ${uptime}.`);
+        }
       }
 
       if (command === '!discord') {
@@ -131,6 +182,8 @@ async function main() {
             `🔴 ${TWITCH_CHANNEL} ist jetzt live und streamt ${gameName} - ${title}`
           );
 
+          startLiveReminder(chatClient, TWITCH_CHANNEL);
+
           console.log('[EVENTSUB] Live announcement sent');
         } catch (err) {
           console.error('[EVENTSUB] Live announcement failed:', err);
@@ -139,6 +192,7 @@ async function main() {
 
       await eventSub.onStreamOffline(TWITCH_BROADCASTER_ID, async () => {
         liveAnnounced = false;
+        stopLiveReminder();
         console.log('[EVENTSUB] Stream offline -> reset live flag');
       });
 
