@@ -35,6 +35,14 @@ async function main() {
     throw new Error(`Missing env vars: ${missing.join(', ')}`);
   }
 
+  const socialReminders = [
+    '📸 Instagram → https://www.instagram.com/zunami9000/',
+    '🎬 TikTok Clips → https://www.tiktok.com/@zunami9000',
+    '▶️ YouTube Highlights → https://www.youtube.com/zunami'
+  ];
+
+  let socialIndex = 0;
+
   const authProvider = new RefreshingAuthProvider({
     clientId: TWITCH_CLIENT_ID_BOT,
     clientSecret: TWITCH_CLIENT_SECRET_BOT
@@ -94,16 +102,17 @@ async function main() {
   function startLiveReminder(chatClient, channel) {
   if (reminderInterval1 || reminderInterval2) return;
 
-  // Reminder 1 (alle 30 Minuten)
+  // Reminder 1 (Follow + Discord)
   reminderInterval1 = setInterval(async () => {
     try {
       await chatClient.say(
         channel,
-        'Falls euch der Stream gefällt, lasst ein Follow da 💜 Und joint den Discord: https://discord.gg/PjJeDSzNZ7'
+        '💜 Wenn euch der Stream gefällt, lasst ein Follow da! 👋 Neu hier? Join den Discord → https://discord.gg/PjJeDSzNZ7'
       );
-      console.log('[REMINDER] Reminder 1 sent');
+
+      console.log('[REMINDER] Follow reminder sent');
     } catch (err) {
-      console.error('[REMINDER] Reminder 1 failed:', err);
+      console.error('[REMINDER] Follow reminder failed:', err);
     }
   }, 30 * 60 * 1000);
 
@@ -111,31 +120,38 @@ async function main() {
   setTimeout(() => {
     reminderInterval2 = setInterval(async () => {
       try {
-        await chatClient.say(
-          channel,
-          '👋 Neu hier? Checkt Zunami´s Socials für Clips & Updates: Discord: https://discord.gg/PjJeDSzNZ7 | Instagram: https://www.instagram.com/zunami9000/ | TikTok: https://www.tiktok.com/@zunami9000 | YouTube: https://www.youtube.com/zunami'
-        );
-        console.log('[REMINDER] Reminder 2 sent');
+        const message = socialReminders[socialIndex];
+
+        await chatClient.say(channel, message);
+
+        socialIndex++;
+        if (socialIndex >= socialReminders.length) {
+          socialIndex = 0;
+        }
+
+        console.log('[REMINDER] Social reminder sent');
       } catch (err) {
-        console.error('[REMINDER] Reminder 2 failed:', err);
+        console.error('[REMINDER] Social reminder failed:', err);
       }
     }, 30 * 60 * 1000);
   }, 15 * 60 * 1000);
 }
 
-function stopLiveReminder() {
-if (reminderInterval1) {
-  clearInterval(reminderInterval1);
-  reminderInterval1 = null;
-}
+  function stopLiveReminder() {
+    if (reminderInterval1) {
+      clearInterval(reminderInterval1);
+      reminderInterval1 = null;
+    }
 
-if (reminderInterval2) {
-  clearInterval(reminderInterval2);
-  reminderInterval2 = null;
-}
+    if (reminderInterval2) {
+      clearInterval(reminderInterval2);
+      reminderInterval2 = null;
+    }
 
-console.log('[REMINDER] All reminders stopped');
-}
+    socialIndex = 0;
+
+    console.log('[REMINDER] All reminders stopped');
+  }
 
   chatClient.onConnect(() => {
     console.log(`[TWITCH] Connected as ${TWITCH_BOT_USERNAME} to #${TWITCH_CHANNEL}`);
