@@ -429,6 +429,7 @@ if (cmd === "resetleaderboard") {
     }
 
     resetLeaderboard();
+    await updateLeaderboardMessage(client);
 
     await message.channel.send("📊 Leaderboard wurde zurückgesetzt.");
   }
