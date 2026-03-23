@@ -15,6 +15,8 @@ const { scheduleLeaderboardUpdate, ensureLeaderboardMessage } = require("./utils
 
 const { startClipTracker } = require("./utils/clip-tracker");
 
+const { resetLeaderboard } = require('./utils/modstats-store');
+
 const {
   Client,
   GatewayIntentBits,
@@ -419,6 +421,17 @@ client.on(Events.MessageCreate, async (message) => {
   await updateLeaderboardMessage(client);
   return message.reply("✅ Leaderboard aktualisiert.");
 }
+
+if (cmd === "resetleaderboard") {
+    // ✅ Nur Admins erlauben
+    if (!message.member.permissions.has("Administrator")) {
+      return message.reply("❌ Keine Berechtigung.");
+    }
+
+    resetLeaderboard();
+
+    await message.channel.send("📊 Leaderboard wurde zurückgesetzt.");
+  }
 
     if (cmd === "embedtest") {
       const { EmbedBuilder } = require("discord.js");

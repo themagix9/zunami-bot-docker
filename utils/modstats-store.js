@@ -87,23 +87,14 @@ function getLeaderboard() {
   return { data, rows };
 }
 
-if (command === '!resetleaderboard') {
-  if (!user.isMod) return;
-
-  const fs = require('fs');
-  const path = require('path');
-
-  const FILE = path.join(process.env.DATA_DIR || '/app/data', 'modstats.json');
-
-  const resetData = {
+function resetLeaderboard() {
+  const data = {
     weekStart: new Date().toISOString(),
     mods: {},
     totals: { timeouts: 0, bans: 0, deletes: 0, automod: 0 },
   };
 
-  fs.writeFileSync(FILE, JSON.stringify(resetData, null, 2), 'utf8');
-
-  await chatClient.say(channel, '📊 Leaderboard wurde zurückgesetzt.');
+  save(data);
 }
 
-module.exports = { incAction, getLeaderboard };
+module.exports = { incAction, getLeaderboard, resetLeaderboard };
