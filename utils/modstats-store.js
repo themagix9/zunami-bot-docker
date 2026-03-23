@@ -20,9 +20,7 @@ function startOfWeekSunday(date = new Date()) {
 function load() {
   ensureDir();
   if (!fs.existsSync(FILE)) {
-    const weekStart = startOfWeekSunday().toISOString();
     const init = {
-      weekStart,
       mods: {},
       totals: { timeouts: 0, bans: 0, deletes: 0, automod: 0 },
     };
@@ -40,14 +38,6 @@ function save(data) {
 }
 
 function ensureCurrentWeek(data) {
-  const current = startOfWeekSunday().toISOString();
-  if (data.weekStart !== current) {
-    return {
-      weekStart: current,
-      mods: {},
-      totals: { timeouts: 0, bans: 0, deletes: 0, automod: 0 },
-    };
-  }
   return data;
 }
 
@@ -95,6 +85,25 @@ function getLeaderboard() {
 
   rows.sort((a, b) => b.score - a.score);
   return { data, rows };
+}
+
+if (command === '!resetleaderboard') {
+  if (!user.isMod) return;
+
+  const fs = require('fs');
+  const path = require('path');
+
+  const FILE = path.join(process.env.DATA_DIR || '/app/data', 'modstats.json');
+
+  const resetData = {
+    weekStart: new Date().toISOString(),
+    mods: {},
+    totals: { timeouts: 0, bans: 0, deletes: 0, automod: 0 },
+  };
+
+  fs.writeFileSync(FILE, JSON.stringify(resetData, null, 2), 'utf8');
+
+  await chatClient.say(channel, '📊 Leaderboard wurde zurückgesetzt.');
 }
 
 module.exports = { incAction, getLeaderboard };
