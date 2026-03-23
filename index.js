@@ -418,7 +418,7 @@ client.on(Events.MessageCreate, async (message) => {
   const cmd = args.shift()?.toLowerCase();
 
   if (cmd === "modstats") {
-  await updateLeaderboardMessage(client);
+  await scheduleLeaderboardUpdate(discordClient);
   return message.reply("✅ Leaderboard aktualisiert.");
 }
 
@@ -429,7 +429,7 @@ if (cmd === "resetleaderboard") {
     }
 
     resetLeaderboard();
-    await updateLeaderboardMessage(client);
+    await scheduleLeaderboardUpdate(discordClient);
 
     await message.channel.send("📊 Leaderboard wurde zurückgesetzt.");
   }
